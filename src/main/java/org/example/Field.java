@@ -35,4 +35,8 @@ public record Field(int row, int col, int box, Set<Integer> candidates) {
         return new ArrayList<>(candidates);
     }
 
+    public boolean hasCandidate(int value){
+        return candidates.contains(value);
+    }
+
 }

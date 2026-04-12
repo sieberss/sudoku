@@ -2,9 +2,11 @@ package org.example;
 
 import java.util.*;
 import java.util.function.Function;
+import java.util.function.Predicate;
 
 public class Sudoku {
     private static final Set<Integer> ALL_NUMBERS = Set.of(1, 2, 3, 4, 5, 6, 7, 8, 9);
+    private enum IndexType {ROW, COL, BOX};
     private static final Comparator<Field> FEWEST_CANDIDATES 
             = Comparator.comparing(Field::countCandidates)
                         .thenComparing(Field::row)
@@ -89,13 +91,54 @@ public class Sudoku {
         boolean noGuessing = true;
         while (!openFields.isEmpty() && noGuessing) {
             openFields.sort(FEWEST_CANDIDATES);
-            noGuessing = solvedFurtherFields();
+            noGuessing = hasFieldsWithSingleCandidate()
+                || hasNumbersWithSingleIndex();
             // other strategies could be tried before guessing
             System.out.println(stringify());
         }
         if (!openFields.isEmpty())
             return getSolutionByGuessing();
         return board;
+    }
+
+    private boolean hasNumbersWithSingleIndex() {
+        List<Field> openFieldsWithNumber;
+        boolean found = false;
+        for (int number = 0; number < 9; number++) {
+            for (int row = 0; row < 9; row++) {
+                openFieldsWithNumber = getOpenFieldsWithNumber(number, IndexType.ROW, row);
+                found |= foundSingleFieldForNumber(number, openFieldsWithNumber);
+            }
+            for (int col = 0; col < 9; col++) {
+                openFieldsWithNumber = getOpenFieldsWithNumber(number, IndexType.COL, col);
+                found |= foundSingleFieldForNumber(number, openFieldsWithNumber);
+            }
+            for (int box = 0; box < 9; box++) {
+                openFieldsWithNumber = getOpenFieldsWithNumber(number, IndexType.BOX, box);
+                found |= foundSingleFieldForNumber(number, openFieldsWithNumber);
+            }
+        }
+        return found;
+    }
+
+    private boolean foundSingleFieldForNumber(int number, List<Field> fieldsWithNumber) {
+        if (fieldsWithNumber.size() == 1) {
+            markFieldSolvedWithValue(fieldsWithNumber.get(0), number);
+            return true;
+        }
+        return false;
+    }
+
+    private List<Field> getOpenFieldsWithNumber(int number, IndexType type, int index) {
+        Predicate<Field> fieldHasIndex = switch (type){
+            case ROW: yield field -> field.row() == index;
+            case COL: yield field -> field.col() == index;
+            case BOX: yield field -> field.box() == index;
+        };
+        return openFields.stream()
+                .filter(fieldHasIndex)
+                .filter(field -> field.hasCandidate(number))
+                .toList();
     }
 
     private int[][] getSolutionByGuessing() {
@@ -129,7 +172,7 @@ public class Sudoku {
         }
     }
 
-    private boolean solvedFurtherFields() {
+    private boolean hasFieldsWithSingleCandidate() {
         int fewest = openFields.get(0).countCandidates();
         if  (fewest == 1) {
             updateSolvedFields();
