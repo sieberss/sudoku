@@ -83,6 +83,8 @@ public class Sudoku {
             openFields.remove(field);
             solved.add(field);
             openFields.forEach(f -> f.excludeValueFromRowColAndBox(value, field));
+            // check also solved fields to prevent an illegal solution
+            solved.forEach(f -> f.excludeValueFromRowColAndBox(value, field));
         }
     }
     public int[][] solve() {
